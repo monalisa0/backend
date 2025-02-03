@@ -2,24 +2,77 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
-const taskRoutes = require("./routes/taskRoutes");  // Import routes
-
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+const PORT = process.env.PORT;
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/mernapp";
 
-mongoose.connect("mongodb://localhost:27017/mernapp", {
+// Middleware
+app.use(cors({ origin: "*" })); // Allow all origins (Fixes mobile issue)
+app.use(express.json()); // Parse JSON request body
+
+// Connect to MongoDB
+mongoose.connect(MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
-}).then(() => console.log("MongoDB Connected"))
-  .catch(err => console.error(err));
+})
+.then(() => console.log("✅ MongoDB Connected"))
+.catch((err) => console.error("❌ MongoDB Connection Error:", err));
 
-  // Use the task routes
-app.use("/", taskRoutes);  
+// Task Schema
+const taskSchema = new mongoose.Schema({
+    title: String,
+    completed: { type: Boolean, default: false }
+});
+const Task = mongoose.model("Task", taskSchema);
 
-app.get("/", (req, res) => {
-    res.send("API is running...");
+// Routes
+
+// 🔹 Get All Tasks
+app.get("/tasks", async (req, res) => {
+    try {
+        const tasks = await Task.find();
+        res.json(tasks);
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error });
+    }
 });
 
-app.listen(5001, () => console.log("Server running on port 5001"));
+// 🔹 Create a Task
+app.post("/tasks", async (req, res) => {
+    try {
+        const { title } = req.body;
+        if (!title) return res.status(400).json({ message: "Title is required" });
+
+        const newTask = new Task({ title });
+        await newTask.save();
+        res.status(201).json(newTask);
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error });
+    }
+});
+
+// 🔹 Update a Task (Mark as Completed)
+app.put("/tasks/:id", async (req, res) => {
+    try {
+        const task = await Task.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!task) return res.status(404).json({ message: "Task not found" });
+        res.json(task);
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error });
+    }
+});
+
+// 🔹 Delete a Task
+app.delete("/tasks/:id", async (req, res) => {
+    try {
+        const task = await Task.findByIdAndDelete(req.params.id);
+        if (!task) return res.status(404).json({ message: "Task not found" });
+        res.json({ message: "Task deleted" });
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error });
+    }
+});
+
+// Start Server
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}  ${MONGO_URI} `));
