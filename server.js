@@ -1,3 +1,36 @@
+
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require("cors");
+require("dotenv").config();
+const bodyParser = require('body-parser');
+const allocateWorkRoute = require('./routes/allocateWork');
+
+const app = express();
+const PORT = process.env.PORT;
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/mernapp";
+
+
+// Middleware
+app.use(bodyParser.json());
+
+// Connect to MongoDB
+mongoose.connect(MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
+.then(() => console.log("✅ MongoDB Connected"))
+.catch((err) => console.error("❌ MongoDB Connection Error:", err));
+
+
+// Routes
+app.use('/api/workstations', allocateWorkRoute);
+
+// Start Server
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}  ${MONGO_URI} `));
+
+/*old code*/
+/*
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -76,3 +109,5 @@ app.delete("/tasks/:id", async (req, res) => {
 
 // Start Server
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}  ${MONGO_URI} `));
+
+*/
